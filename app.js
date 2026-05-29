@@ -42,7 +42,8 @@ function createSpendingEntry(body) {
 function renderBudgetHome(res) {
     return res.render('BudgetHome', {
         budgetTotal: totalBudget,
-        spendingBreakdown: buildBudgetHomeRows()
+        spendingBreakdown: buildBudgetHomeRows(),
+        allocatePortionUrl: '/AllocatePortion'
     });
 }
 
