@@ -11,8 +11,29 @@ app.use(express.urlencoded({ extended: true }));
 const spendingBreakdown = [];
 let nextSpendingId = 1;
 let totalBudget = 0;
+let budgetStartDate = null;
+let budgetEndDate = null;
 
 const defaultColors = ['#2563eb', '#16a34a', '#f97316'];
+
+function getTodayDateString() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function resetBudgetIfExpired() {
+    if (!budgetEndDate) {
+        return;
+    }
+
+    const today = getTodayDateString();
+
+    if (today > budgetEndDate) {
+        spendingBreakdown.length = 0;
+        totalBudget = 0;
+        budgetStartDate = null;
+        budgetEndDate = null;
+    }
+}
 
 function buildBudgetHomeRows() {
     return spendingBreakdown.map((entry) => ({
@@ -40,10 +61,32 @@ function createSpendingEntry(body) {
 }
 
 function renderBudgetHome(res) {
+    resetBudgetIfExpired();
+
     return res.render('BudgetHome', {
         budgetTotal: totalBudget,
         spendingBreakdown: buildBudgetHomeRows(),
         allocatePortionUrl: '/AllocatePortion'
+    });
+}
+
+function renderSetBudget(res) {
+    resetBudgetIfExpired();
+
+    return res.render('SetBudget', {
+        totalBudget,
+        budgetStartDate,
+        budgetEndDate,
+        setBudgetUrl: '/set'
+    });
+}
+
+function renderEditBudget(res) {
+    resetBudgetIfExpired();
+
+    return res.render('EditBudget', {
+        totalBudget,
+        editBudgetUrl: '/EditBudget'
     });
 }
 
@@ -87,12 +130,61 @@ app.get('/delete-portion', (_req, res) => {
     renderDeletePortion(res);
 });
 
+app.get('/set', (_req, res) => {
+    renderSetBudget(res);
+});
+
+app.get('/SetBudget', (_req, res) => {
+    renderSetBudget(res);
+});
+
+app.get('/EditBudget', (_req, res) => {
+    renderEditBudget(res);
+});
+
+app.post(['/set', '/SetBudget'], (req, res) => {
+    const budgetAmount = Number(req.body.amountOfBudget ?? req.body.amount ?? 0) || 0;
+    const startDate = String(req.body.startDate ?? '').trim() || null;
+    const endDate = String(req.body.endDate ?? '').trim() || null;
+
+    totalBudget = budgetAmount;
+    budgetStartDate = startDate;
+    budgetEndDate = endDate;
+
+    if (budgetEndDate && getTodayDateString() > budgetEndDate) {
+        spendingBreakdown.length = 0;
+        totalBudget = 0;
+        budgetStartDate = null;
+        budgetEndDate = null;
+    }
+
+    res.redirect('/BudgetHome');
+});
+
+app.post('/EditBudget', (req, res) => {
+    resetBudgetIfExpired();
+
+    const amount = Math.abs(Number(req.body.amount ?? req.body.adjustmentAmount ?? 0) || 0);
+    const operation = String(req.body.operation ?? 'add').toLowerCase();
+
+    if (operation === 'subtract') {
+        totalBudget -= amount;
+    } else {
+        totalBudget += amount;
+    }
+
+    res.redirect('/BudgetHome');
+});
+
 app.post(['/AllocatePortion', '/allocate-portion'], (req, res) => {
+    resetBudgetIfExpired();
     spendingBreakdown.push(createSpendingEntry(req.body));
     res.redirect('/BudgetHome');
 });
 
 app.post('/DeletePortion/:id', (req, res) => {
+    resetBudgetIfExpired();
+
     const portionId = Number(req.params.id);
     const portionIndex = spendingBreakdown.findIndex((entry) => entry.id === portionId);
 
