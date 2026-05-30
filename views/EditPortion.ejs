@@ -6,4 +6,119 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <title>Edit Portion</title>
+    <style>
+        body {
+            background: linear-gradient(180deg, #f6f8fb 0%, #eef2f7 100%);
+            min-height: 100vh;
+        }
+
+        .edit-shell {
+            max-width: 1100px;
+        }
+
+        .edit-card {
+            border: 0;
+            border-radius: 1.25rem;
+            box-shadow: 0 1rem 2.5rem rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+        }
+
+        .portion-tile {
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            background: #fff;
+            box-shadow: 0 0.5rem 1.25rem rgba(15, 23, 42, 0.05);
+        }
+
+        .portion-accent {
+            height: 0.45rem;
+            border-radius: 999px 999px 0 0;
+        }
+
+        .portion-label {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+
+        .portion-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .empty-state {
+            border: 1px dashed #cbd5e1;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.7);
+        }
+    </style>
 </head>
+<body>
+    <%- include('partial/navbar') %>
+
+    <%
+        const rows = Array.isArray(spendingBreakdown) ? spendingBreakdown : [];
+        const moneyFormatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        });
+        const totalValue = Number(totalAllocated) || rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+    %>
+
+    <main class="container py-5 edit-shell">
+        <div class="card edit-card">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+                    <div>
+                        <h1 class="h3 mb-2">Edit Portion</h1>
+                        <p class="text-muted mb-0">Update the amount allocated to each portion by entering a new value and saving it.</p>
+                    </div>
+                    <div class="badge text-bg-light border fs-6 px-3 py-2">Total allocated: <%= moneyFormatter.format(totalValue) %></div>
+                </div>
+
+                <% if (rows.length === 0) { %>
+                    <div class="empty-state p-4 text-center text-muted">
+                        No portions have been added yet. Go to Allocate Portion to create one first.
+                    </div>
+                <% } else { %>
+                    <div class="row g-4">
+                        <% rows.forEach((portion) => { %>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="portion-tile h-100">
+                                    <div class="portion-accent" style="background-color: <%= portion.color || '#2563eb' %>"></div>
+                                    <div class="p-4 d-flex flex-column gap-3 h-100">
+                                        <div>
+                                            <div class="portion-label mb-1">Portion name</div>
+                                            <div class="h5 mb-0"><%= portion.reason %></div>
+                                        </div>
+
+                                        <div>
+                                            <div class="portion-label mb-1">Current allocated amount</div>
+                                            <div class="portion-value" style="color: <%= portion.color || '#111827' %>"><%= moneyFormatter.format(Number(portion.amount) || 0) %></div>
+                                        </div>
+
+                                        <form action="<%= editPortionUrl || '/EditPortion' %>/<%= portion.id %>" method="POST" class="mt-auto">
+                                            <label for="amount-<%= portion.id %>" class="form-label">New amount</label>
+                                            <input
+                                                type="number"
+                                                class="form-control form-control-lg"
+                                                id="amount-<%= portion.id %>"
+                                                name="amount"
+                                                value="<%= Number(portion.amount) || 0 %>"
+                                                min="0"
+                                                step="0.01"
+                                                required
+                                            >
+                                            <button type="submit" class="btn btn-primary w-100 mt-3">Update Amount</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

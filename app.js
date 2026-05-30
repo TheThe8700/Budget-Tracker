@@ -106,6 +106,23 @@ function renderDeletePortion(res) {
     });
 }
 
+function renderEditPortion(res) {
+    const rows = spendingBreakdown.map((entry) => ({
+        id: entry.id,
+        reason: entry.reason,
+        amount: entry.amountSpent,
+        color: entry.assignedColor
+    }));
+
+    const totalAllocated = rows.reduce((sum, row) => sum + row.amount, 0);
+
+    return res.render('EditPortion', {
+        spendingBreakdown: rows,
+        totalAllocated,
+        editPortionUrl: '/EditPortion'
+    });
+}
+
 app.get('/', (_req, res) => {
     renderBudgetHome(res);
 });
@@ -140,6 +157,14 @@ app.get('/SetBudget', (_req, res) => {
 
 app.get('/EditBudget', (_req, res) => {
     renderEditBudget(res);
+});
+
+app.get('/EditPortion', (_req, res) => {
+    renderEditPortion(res);
+});
+
+app.get('/edit-portion', (_req, res) => {
+    renderEditPortion(res);
 });
 
 app.post(['/set', '/SetBudget'], (req, res) => {
@@ -180,6 +205,20 @@ app.post(['/AllocatePortion', '/allocate-portion'], (req, res) => {
     resetBudgetIfExpired();
     spendingBreakdown.push(createSpendingEntry(req.body));
     res.redirect('/BudgetHome');
+});
+
+app.post('/EditPortion/:id', (req, res) => {
+    resetBudgetIfExpired();
+
+    const portionId = Number(req.params.id);
+    const portion = spendingBreakdown.find((entry) => entry.id === portionId);
+    const updatedAmount = Number(req.body.amount ?? req.body.amountSpent ?? req.body.newAmount ?? 0) || 0;
+
+    if (portion) {
+        portion.amountSpent = updatedAmount;
+    }
+
+    res.redirect('/EditPortion');
 });
 
 app.post('/DeletePortion/:id', (req, res) => {
