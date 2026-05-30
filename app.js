@@ -47,6 +47,22 @@ function renderBudgetHome(res) {
     });
 }
 
+function renderDeletePortion(res) {
+    const rows = spendingBreakdown.map((entry) => ({
+        id: entry.id,
+        reason: entry.reason,
+        amount: entry.amountSpent
+    }));
+
+    const totalAllocated = rows.reduce((sum, row) => sum + row.amount, 0);
+
+    return res.render('DeletePortion', {
+        spendingBreakdown: rows,
+        totalAllocated,
+        deletePortionUrl: '/DeletePortion'
+    });
+}
+
 app.get('/', (_req, res) => {
     renderBudgetHome(res);
 });
@@ -63,9 +79,28 @@ app.get('/allocate-portion', (_req, res) => {
     res.render('AllocatePortion');
 });
 
+app.get('/DeletePortion', (_req, res) => {
+    renderDeletePortion(res);
+});
+
+app.get('/delete-portion', (_req, res) => {
+    renderDeletePortion(res);
+});
+
 app.post(['/AllocatePortion', '/allocate-portion'], (req, res) => {
     spendingBreakdown.push(createSpendingEntry(req.body));
     res.redirect('/BudgetHome');
+});
+
+app.post('/DeletePortion/:id', (req, res) => {
+    const portionId = Number(req.params.id);
+    const portionIndex = spendingBreakdown.findIndex((entry) => entry.id === portionId);
+
+    if (portionIndex !== -1) {
+        spendingBreakdown.splice(portionIndex, 1);
+    }
+
+    res.redirect('/DeletePortion');
 });
 
 
